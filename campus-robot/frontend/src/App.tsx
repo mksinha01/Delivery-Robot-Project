@@ -16,12 +16,29 @@ const robotIcon = new L.Icon({
 
 const BACKEND = 'http://localhost:3001'
 
+// Campus locations mapping
+const CAMPUS_LOCATIONS = {
+  'Library': { x: 10, y: 15 },
+  'Student Center': { x: -5, y: 20 },
+  'Engineering Building': { x: 20, y: 10 },
+  'Dining Hall': { x: -10, y: 5 },
+  'Dormitory A': { x: 15, y: -10 },
+  'Dormitory B': { x: -15, y: -5 },
+  'Sports Complex': { x: 25, y: -15 },
+  'Admin Building': { x: 0, y: 30 },
+  'Lab Building': { x: -20, y: 15 },
+  'Parking Lot': { x: 30, y: 0 },
+  'CSVTU UTD 1 Building': { x: 35, y: 20 }
+}
+
 function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null)
   useEffect(() => {
     const s = io(BACKEND)
     setSocket(s)
-    return () => s.close()
+    return () => {
+      s.close()
+    }
   }, [])
   return socket
 }
@@ -34,8 +51,8 @@ export default function App() {
   const socket = useSocket()
   const [robot, setRobot] = useState<RobotState>({ x: 0, y: 0, heading: 0, mode: 'manual' })
   const [orders, setOrders] = useState<Order[]>([])
-  const [from, setFrom] = useState('Building A')
-  const [to, setTo] = useState('Building B')
+  const [from, setFrom] = useState('Library')
+  const [to, setTo] = useState('Student Center')
 
   useEffect(() => {
     if (!socket) return
@@ -92,13 +109,15 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <h1>Campus Delivery Robot</h1>
+        <h1>🤖 Campus Delivery Robot</h1>
         <div className="controls">
-          <button onClick={() => tx('LEFT')}>Left ⟲</button>
-          <button onClick={() => tx('RIGHT')}>Right ⟳</button>
-          <button onClick={() => tx('FORWARD')}>Forward ↑</button>
-          <button onClick={() => tx('BACK')}>Back ↓</button>
-          <button onClick={toggleMode}>Mode: {robot.mode}</button>
+          <button onClick={() => tx('LEFT')}>⟲ Left</button>
+          <button onClick={() => tx('FORWARD')}>↑ Forward</button>
+          <button onClick={() => tx('RIGHT')}>⟳ Right</button>
+          <button onClick={() => tx('BACK')}>↓ Back</button>
+          <button className="mode-button" onClick={toggleMode}>
+            Mode: {robot.mode.toUpperCase()}
+          </button>
         </div>
       </header>
 
@@ -116,31 +135,59 @@ export default function App() {
         </section>
 
         <section className="sidebar">
-          <h3>Create Order</h3>
-          <div className="form">
-            <label>
-              From
-              <input value={from} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label>
-              To
-              <input value={to} onChange={(e) => setTo(e.target.value)} />
-            </label>
-            <button onClick={createOrder}>Add Order</button>
+          <h3>🤖 Robot Status</h3>
+          <div className="robot-info">
+            <div className="robot-stats">
+              <div>Position: ({robot.x.toFixed(1)}, {robot.y.toFixed(1)})</div>
+              <div>Heading: {robot.heading}°</div>
+              <div>Mode: {robot.mode.toUpperCase()}</div>
+            </div>
           </div>
 
-          <h3>Orders</h3>
+          <h3>📦 Create Order</h3>
+          <div className="form">
+            <label>
+              📍 From Location
+              <select value={from} onChange={(e) => setFrom(e.target.value)}>
+                {Object.keys(CAMPUS_LOCATIONS).map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              🎯 To Location
+              <select value={to} onChange={(e) => setTo(e.target.value)}>
+                {Object.keys(CAMPUS_LOCATIONS).map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </label>
+            <button onClick={createOrder}>📋 Add Order</button>
+          </div>
+
+          <h3>📋 Orders</h3>
           <ul className="orders">
             {orders.map((o) => (
               <li key={o.id}>
-                #{o.id} {o.from} → {o.to} <em>({o.status})</em>
+                <strong>#{o.id}</strong> {o.from} → {o.to}
+                <br/>
+                <span className={`order-status ${o.status.replace(/[^a-z]/g, '-')}`}>
+                  {o.status.toUpperCase()}
+                </span>
               </li>
             ))}
+            {orders.length === 0 && (
+              <li style={{ color: '#666', fontStyle: 'italic' }}>
+                No orders yet. Create your first delivery order above!
+              </li>
+            )}
           </ul>
         </section>
       </main>
 
-      <footer className="footer">Use arrow keys or WASD to drive the robot.</footer>
+      <footer className="footer">
+        🎮 Use arrow keys or WASD to control robot manually | 🗺️ Select locations to create delivery orders
+      </footer>
     </div>
   )
 }
